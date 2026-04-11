@@ -558,9 +558,11 @@ auth.onAuthStateChanged(async (user) => {
         document.getElementById("mainApp").style.display = "block";
         loadStoreLocal();
         initExternalLinks();
-        loadModule('admin');
+        const startModule = sessionStorage.getItem('startModule') || 'admin';
+        sessionStorage.removeItem('startModule');
+        loadModule(startModule);
         await loadDataFromFirestore();
-        loadModule('admin'); // rerender avec données Firestore
+        loadModule(startModule); // rerender avec données Firestore
     } else {
         currentUser = null;
         document.getElementById("loginScreen").style.display = "block";
@@ -1259,14 +1261,72 @@ document.querySelectorAll(".module-btn").forEach(btn => {
     btn.addEventListener("click", () => loadModule(btn.dataset.module));
 });
 </script>
-    <script>
-  if ('serviceWorker' in navigator) {
+
+<!-- ==================== PWA : Enregistrement Service Worker + Bouton installation ==================== -->
+<div id="pwaInstallBanner" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1a5276; color:white; padding:12px 20px; border-radius:50px; box-shadow:0 4px 20px rgba(0,0,0,0.25); z-index:9998; align-items:center; gap:12px; font-family:'Outfit',sans-serif; font-size:14px; font-weight:600; white-space:nowrap;">
+    📲 Installer l'application
+    <button onclick="installerPWA()" style="background:white; color:#1a5276; padding:6px 14px; border-radius:30px; font-size:13px; margin-left:4px;">Installer</button>
+    <button onclick="document.getElementById('pwaInstallBanner').style.display='none'" style="background:transparent; color:rgba(255,255,255,0.7); padding:4px 8px; font-size:18px; line-height:1;">×</button>
+</div>
+
+<script>
+// ===== Service Worker =====
+if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('[SW] Enregistré:', reg.scope))
-        .catch(err => console.error('[SW] Erreur:', err));
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => {
+                console.log('[SW] Enregistré:', reg.scope);
+                // Détecte une nouvelle version disponible
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            toast('🔄 Mise à jour disponible — rechargez la page', 'default', 6000);
+                        }
+                    });
+                });
+            })
+            .catch(err => console.error('[SW] Erreur d\'enregistrement:', err));
     });
-  }
+}
+
+// ===== Bouton d'installation PWA =====
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const banner = document.getElementById('pwaInstallBanner');
+    banner.style.display = 'flex';
+});
+
+async function installerPWA() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+        toast('✅ Application installée avec succès !', 'success');
+    }
+    deferredPrompt = null;
+    document.getElementById('pwaInstallBanner').style.display = 'none';
+}
+
+// Masque le banner si déjà installé
+window.addEventListener('appinstalled', () => {
+    document.getElementById('pwaInstallBanner').style.display = 'none';
+    deferredPrompt = null;
+    toast('✅ Application installée !', 'success');
+});
+
+// Gestion paramètre ?module= dans l'URL (raccourcis PWA)
+window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const module = params.get('module');
+    if (module && ['admin','personnel','pos','catalogue','proforma'].includes(module)) {
+        // Sera chargé après l'authentification
+        sessionStorage.setItem('startModule', module);
+    }
+});
 </script>
 </body>
 </html>
