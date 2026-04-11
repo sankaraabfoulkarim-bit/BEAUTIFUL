@@ -1259,5 +1259,14 @@ document.querySelectorAll(".module-btn").forEach(btn => {
     btn.addEventListener("click", () => loadModule(btn.dataset.module));
 });
 </script>
+    <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('[SW] Enregistré:', reg.scope))
+        .catch(err => console.error('[SW] Erreur:', err));
+    });
+  }
+</script>
 </body>
 </html>
