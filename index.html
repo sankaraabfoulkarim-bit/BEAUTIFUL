@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Dashboard Pro - Burkina Faso</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a5276">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+
+        :root {
+            --primary: #1a5276;
+            --primary-light: #2c7da0;
+            --accent: #f39c12;
+            --success: #2a9d8f;
+            --danger: #e63946;
+            --whatsapp: #25D366;
+            --bluetooth: #1e88e5;
+            --bg: #f0f2f5;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --shadow: 0 2px 12px rgba(0,0,0,0.07);
+            --radius: 20px;
+            --radius-sm: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            font-family: 'Outfit', 'Segoe UI', system-ui, sans-serif;
+            padding: 16px;
+            color: var(--text);
+            font-size: 15px;
+        }
+
+        .dashboard { max-width: 1400px; margin: 0 auto; }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: var(--primary);
+            border-radius: var(--radius);
+            padding: 14px 22px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            box-shadow: 0 4px 20px rgba(26,82,118,0.3);
+        }
+        .logo { font-size: 1.2rem; font-weight: 700; color: white; letter-spacing: 0.5px; }
+        .header-right { display: flex; align-items: center; gap: 12px; color: rgba(255,255,255,0.85); font-size: 14px; }
+
+        /* ===== SYNC STATUS ===== */
+        .sync-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .sync-badge.synced { background: rgba(42,157,143,0.2); color: #2a9d8f; }
+        .sync-badge.syncing { background: rgba(243,156,18,0.2); color: #f39c12; }
+        .sync-badge.error { background: rgba(230,57,70,0.2); color: #e63946; }
+        .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+        .sync-badge.syncing .sync-dot { animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        /* ===== NAVIGATION ===== */
+        .module-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .module-btn {
+            background: white;
+            border: none;
+            padding: 9px 18px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: all 0.2s;
+            font-family: inherit;
+            color: var(--text-light);
+        }
+        .module-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.12); color: var(--primary); }
+        .module-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 16px rgba(26,82,118,0.35); }
+
+        /* ===== CONTENT ===== */
+        .content-area {
+            background: white;
+            border-radius: var(--radius);
+            padding: 22px;
+            min-height: 500px;
+            box-shadow: var(--shadow);
+        }
+        .content-area h2 {
+            font-size: 1.1rem;
+            margin-bottom: 18px;
+            color: var(--primary);
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--bg);
+        }
+
+        /* ===== CARDS ===== */
+        .card {
+            background: var(--bg);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            margin-bottom: 14px;
+        }
+        .card h3 { font-size: 0.95rem; color: var(--primary); margin-bottom: 12px; }
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+        .flex-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+        /* ===== KPI GRID ===== */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .kpi-card {
+            background: white;
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            border-top: 3px solid var(--primary-light);
+        }
+        .kpi-card .kpi-val { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        .kpi-card .kpi-label { font-size: 12px; color: var(--text-light); margin-top: 3px; }
+        .kpi-card.alert { border-top-color: var(--danger); }
+        .kpi-card.alert .kpi-val { color: var(--danger); }
+
+        /* ===== BUTTONS ===== */
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        button:hover { opacity: 0.88; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        button.danger { background: var(--danger); }
+        button.success { background: var(--success); }
+        button.whatsapp { background: var(--whatsapp); }
+        button.bluetooth { background: var(--bluetooth); }
+        button.secondary { background: white; color: var(--primary); border: 1px solid var(--border); }
+        button.sm { padding: 5px 12px; font-size: 12px; }
+
+        /* ===== FORMS ===== */
+        input, select, textarea {
+            width: 100%;
+            padding: 9px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-family: inherit;
+            background: white;
+            color: var(--text);
+            transition: border-color 0.2s;
+            margin-bottom: 0;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-light);
+        }
+
+        /* ===== TABLES ===== */
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th {
+            background: var(--primary);
+            color: white;
+            padding: 9px 10px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        th:first-child { border-radius: 8px 0 0 8px; }
+        th:last-child { border-radius: 0 8px 8px 0; }
+        td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8fafc; }
+
+        .total {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            padding: 14px;
+            border-radius: var(--radius-sm);
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-top: 12px;
+        }
+
+        /* ===== EXTERNAL LINKS ===== */
+        .external-links {
+            margin-top: 14px;
+            background: white;
+            border-radius: 50px;
+            padding: 10px 18px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            box-shadow: var(--shadow);
+        }
+        .external-links a {
+            text-decoration: none;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+        .external-links a:hover { color: var(--accent); }
+
+        /* ===== LOGIN ===== */
+        .login-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            margin: -16px;
+            padding: 20px;
+        }
+        .login-container {
+            background: white;
+            border-radius: 28px;
+            padding: 36px 32px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .login-container h2 { font-size: 1.5rem; color: var(--primary); margin-bottom: 6px; }
+        .login-container p { color: var(--text-light); margin-bottom: 24px; font-size: 14px; }
+        .login-field { margin-bottom: 14px; text-align: left; }
+        .login-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-light); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .login-btn { width: 100%; padding: 12px; font-size: 16px; border-radius: 14px; margin-top: 8px; }
+        .error { color: var(--danger); margin-top: 10px; font-size: 13px; }
+
+        /* ===== BADGE STOCK ===== */
+        .badge-stock {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-stock.ok { background: #d1fae5; color: #065f46; }
+        .badge-stock.low { background: #fee2e2; color: #991b1b; }
+
+        /* ===== TOAST ===== */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--text);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 9999;
+            transform: translateY(80px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+            pointer-events: none;
+            max-width: 320px;
+        }
+        #toast.show { transform: translateY(0); opacity: 1; }
+        #toast.success { background: var(--success); }
+        #toast.error { background: var(--danger); }
+
+        @media (max-width: 640px) {
+            .header { flex-direction: column; align-items: flex-start; }
+            .module-btn { padding: 8px 14px; font-size: 13px; }
+            .content-area { padding: 16px; }
+            body { padding: 10px; }
+        }
+
+        @media print {
+            body * { visibility: hidden; }
+            .print-ticket, .print-ticket * { visibility: visible; }
+            .print-ticket { position: absolute; top: 0; left: 0; width: 72mm; padding: 4mm; font-family: monospace; }
+        }
+    </style>
+</head>
+<body>
+<div id="toast"></div>
+
+<div class="dashboard" id="app">
+
+    <!-- LOGIN -->
+    <div id="loginScreen">
+        <div class="login-wrapper">
+            <div class="login-container">
+                <h2>🔐 Administration</h2>
+                <p>Connectez-vous avec votre compte Firebase</p>
+                <div class="login-field">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" placeholder="admin@exemple.com">
+                </div>
+                <div class="login-field">
+                    <label>Mot de passe</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter') login()">
+                </div>
+                <button class="login-btn" onclick="login()">Se connecter</button>
+                <div id="loginError" class="error"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP PRINCIPALE -->
+    <div id="mainApp" style="display:none;">
+        <div class="header">
+            <div class="logo">📊 DASHBOARD PRO — BURKINA FASO</div>
+            <div class="header-right">
+                <span id="syncStatus" class="sync-badge synced"><span class="sync-dot"></span> Synchronisé</span>
+                <span style="font-size:13px;">💰 Franc CFA (XOF)</span>
+                <button onclick="logout()" class="danger" style="padding:5px 14px; font-size:13px;">Déconnexion</button>
+            </div>
+        </div>
+
+        <div class="module-buttons">
+            <button class="module-btn active" data-module="admin">👑 Admin</button>
+            <button class="module-btn" data-module="personnel">👥 Personnel</button>
+            <button class="module-btn" data-module="pos">🛒 POS</button>
+            <button class="module-btn" data-module="catalogue">📦 Catalogue</button>
+            <button class="module-btn" data-module="proforma">📄 Proforma</button>
+        </div>
+
+        <div class="content-area" id="mainContent">
+            <p style="color:var(--text-light); text-align:center; padding:40px 0;">⏳ Chargement...</p>
+        </div>
+
+        <div class="external-links">
+            <a href="#" id="linkRh" target="_blank">📱 App RH</a>
+            <a href="#" id="linkCompta" target="_blank">💰 App Compta</a>
+            <a href="#" id="linkStock" target="_blank">📦 App Stock</a>
+            <a href="#" id="linkClient" target="_blank">⭐ Service Client</a>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase SDKs (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ==================== CONFIGURATION FIREBASE ====================
+// ⚠️ REMPLACEZ CES VALEURS PAR CELLES DE VOTRE PROJET FIREBASE
+const firebaseConfig = {
+  apiKey: "AIzaSyA0VLooiI4SY12FSYGkpAnCEiAyJD8FZEA",
+  authDomain: "salon-de-coiffure-43cc6.firebaseapp.com",
+  projectId: "salon-de-coiffure-43cc6",
+  storageBucket: "salon-de-coiffure-43cc6.firebasestorage.app",
+  messagingSenderId: "916460034809",
+  appId: "1:916460034809:web:f7ece2f4daf078b6e36028"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ==================== ÉTAT GLOBAL ====================
+let store = {
+    employes: [],
+    prestations: [],
+    produits: [],
+    ventes: [],
+    depenses: [],
+    facturesProforma: [],
+    config: {
+        shopName: "Mon Salon",
+        whatsappNum: "22670123456",
+        footerMsg: "Merci de votre confiance",
+        rhUrl: "https://rh.monsalon.bf",
+        comptaUrl: "https://compta.monsalon.bf",
+        stockUrl: "https://stock.monsalon.bf"
+    }
+};
+let currentUser = null;
+
+// ==================== TOAST NOTIFICATION ====================
+function toast(msg, type = "default", duration = 3000) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    setTimeout(() => { el.className = ""; }, duration);
+}
+
+// ==================== SYNC STATUS ====================
+function setSyncStatus(status) {
+    const el = document.getElementById("syncStatus");
+    if (!el) return;
+    if (status === "syncing") {
+        el.className = "sync-badge syncing";
+        el.innerHTML = '<span class="sync-dot"></span> Synchronisation...';
+    } else if (status === "error") {
+        el.className = "sync-badge error";
+        el.innerHTML = '<span class="sync-dot"></span> Erreur sync';
+    } else {
+        el.className = "sync-badge synced";
+        el.innerHTML = '<span class="sync-dot"></span> Synchronisé';
+    }
+}
+
+// ==================== STOCKAGE LOCAL ====================
+function saveStoreLocal() {
+    try {
+        localStorage.setItem("dashboard_store_v2", JSON.stringify(store));
+    } catch(e) { console.warn("localStorage plein:", e); }
+}
+
+function loadStoreLocal() {
+    try {
+        const data = localStorage.getItem("dashboard_store_v2");
+        if (data) Object.assign(store, JSON.parse(data));
+    } catch(e) {}
+}
+
+// ==================== FIRESTORE OPTIMISÉ ====================
+// Charge toutes les collections en parallèle (plus rapide)
+async function loadDataFromFirestore() {
+    if (!currentUser) return;
+    setSyncStatus("syncing");
+    try {
+        const [
+            snapEmployes, snapPrestations, snapProduits,
+            snapVentes, snapDepenses, snapFactures, configDoc
+        ] = await Promise.all([
+            db.collection('employes').get(),
+            db.collection('prestations').orderBy('date', 'desc').limit(500).get(),
+            db.collection('produits').get(),
+            db.collection('ventes').orderBy('date', 'desc').limit(200).get(),
+            db.collection('depenses').orderBy('date', 'desc').limit(100).get(),
+            db.collection('facturesProforma').orderBy('date', 'desc').limit(100).get(),
+            db.collection('config').doc('settings').get()
+        ]);
+
+        store.employes        = snapEmployes.docs.map(d => ({ id: d.id, ...d.data() }));
+        store.prestations     = snapPrestations.docs.map(d => ({ id: d.id, ...d.data() }));
+        store.produits        = snapProduits.docs.map(d => ({ id: d.id, ...d.data() }));
+        store.ventes          = snapVentes.docs.map(d => ({ id: d.id, ...d.data() }));
+        store.depenses        = snapDepenses.docs.map(d => ({ id: d.id, ...d.data() }));
+        store.facturesProforma= snapFactures.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (configDoc.exists) store.config = { ...store.config, ...configDoc.data() };
+
+        saveStoreLocal();
+        setSyncStatus("synced");
+    } catch(e) {
+        console.error("Firestore load error", e);
+        setSyncStatus("error");
+        toast("⚠️ Erreur de chargement Firestore", "error");
+    }
+}
+
+// Sync ciblée : n'envoie que les collections modifiées
+async function syncCollection(collectionName, data) {
+    if (!currentUser) return;
+    setSyncStatus("syncing");
+    try {
+        // Firestore batch max = 500 ops
+        const chunks = [];
+        for (let i = 0; i < data.length; i += 400) chunks.push(data.slice(i, i + 400));
+        for (const chunk of chunks) {
+            const batch = db.batch();
+            for (const item of chunk) {
+                const ref = db.collection(collectionName).doc(item.id);
+                batch.set(ref, item);
+            }
+            await batch.commit();
+        }
+        setSyncStatus("synced");
+    } catch(e) {
+        console.error(`Sync error [${collectionName}]`, e);
+        setSyncStatus("error");
+        toast("⚠️ Erreur de synchronisation", "error");
+    }
+}
+
+async function syncConfigToFirestore() {
+    if (!currentUser) return;
+    try {
+        await db.collection('config').doc('settings').set(store.config);
+        setSyncStatus("synced");
+    } catch(e) {
+        setSyncStatus("error");
+    }
+}
+
+// updateStore : sauvegarde locale immédiate + sync Firestore ciblée
+function updateStore(newData) {
+    Object.assign(store, newData);
+    saveStoreLocal();
+    // Sync uniquement les collections touchées
+    const collectionMap = {
+        employes: 'employes',
+        prestations: 'prestations',
+        produits: 'produits',
+        ventes: 'ventes',
+        depenses: 'depenses',
+        facturesProforma: 'facturesProforma'
+    };
+    for (const key of Object.keys(newData)) {
+        if (collectionMap[key]) {
+            syncCollection(collectionMap[key], newData[key]);
+        }
+        if (key === 'config') syncConfigToFirestore();
+    }
+}
+
+// ==================== AUTHENTIFICATION ====================
+async function login() {
+    const email = document.getElementById("loginEmail").value.trim();
+    const pwd = document.getElementById("loginPassword").value;
+    const errEl = document.getElementById("loginError");
+    errEl.textContent = "";
+    if (!email || !pwd) { errEl.textContent = "Veuillez remplir tous les champs."; return; }
+    try {
+        await auth.signInWithEmailAndPassword(email, pwd);
+    } catch(err) {
+        const msgs = {
+            'auth/user-not-found': 'Utilisateur introuvable.',
+            'auth/wrong-password': 'Mot de passe incorrect.',
+            'auth/too-many-requests': 'Trop de tentatives. Réessayez plus tard.',
+            'auth/invalid-email': 'Email invalide.'
+        };
+        errEl.textContent = msgs[err.code] || "Erreur: " + err.message;
+    }
+}
+
+async function logout() {
+    await auth.signOut();
+}
+
+auth.onAuthStateChanged(async (user) => {
+    if (user) {
+        currentUser = user;
+        document.getElementById("loginScreen").style.display = "none";
+        document.getElementById("mainApp").style.display = "block";
+        loadStoreLocal();
+        initExternalLinks();
+        loadModule('admin');
+        await loadDataFromFirestore();
+        loadModule('admin'); // rerender avec données Firestore
+    } else {
+        currentUser = null;
+        document.getElementById("loginScreen").style.display = "block";
+        document.getElementById("mainApp").style.display = "none";
+    }
+});
+
+// ==================== LIENS EXTERNES ====================
+function initExternalLinks() {
+    const cfg = store.config;
+    const setLink = (id, url) => {
+        const el = document.getElementById(id);
+        if (el) { el.href = url || '#'; el.target = "_blank"; }
+    };
+    setLink("linkRh",     cfg.rhUrl     || "https://rh.monsalon.bf");
+    setLink("linkCompta", cfg.comptaUrl || "https://compta.monsalon.bf");
+    setLink("linkStock",  cfg.stockUrl  || "https://stock.monsalon.bf");
+    setLink("linkClient", `https://wa.me/${(cfg.whatsappNum||'').replace(/\D/g,'')}?text=Service%20client`);
+}
+
+// ==================== NAVIGATION ====================
+function loadModule(module) {
+    document.querySelectorAll(".module-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.module === module);
+    });
+    const renders = {
+        admin: renderAdmin,
+        personnel: renderPersonnel,
+        pos: renderPOS,
+        catalogue: renderCatalogue,
+        proforma: renderProforma
+    };
+    if (renders[module]) renders[module]();
+}
+
+// ==================== MODULE ADMIN ====================
+function calcCAJour() {
+    const today = new Date().toISOString().split('T')[0];
+    return store.ventes.filter(v => v.date && v.date.split('T')[0] === today).reduce((s,v) => s + (v.total||0), 0);
+}
+
+function renderAdmin() {
+    const caJour = calcCAJour();
+    const stockFaible = store.produits.filter(p => p.stock < 5).length;
+
+    let html = `<h2>👑 Administration — Vue d'ensemble</h2>
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-val">${caJour.toLocaleString('fr-FR')}</div>
+            <div class="kpi-label">💰 CA aujourd'hui (CFA)</div>
+        </div>
+        <div class="kpi-card ${stockFaible > 0 ? 'alert' : ''}">
+            <div class="kpi-val">${stockFaible}</div>
+            <div class="kpi-label">📦 Produits stock faible</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-val">${store.employes.length}</div>
+            <div class="kpi-label">👥 Employés actifs</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-val">${store.facturesProforma.length}</div>
+            <div class="kpi-label">🧾 Factures proforma</div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <h3>📋 Dernières prestations (20)</h3>
+            <div id="adminPrestations"></div>
+        </div>
+        <div class="card">
+            <h3>💰 Dépenses récentes</h3>
+            <div id="adminDepenses"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>⚙️ Configuration</h3>
+        <div class="grid-2">
+            <div>
+                <label style="font-size:12px;font-weight:600;color:var(--text-light);">Nom du salon</label>
+                <input type="text" id="shopName" placeholder="Nom du salon" value="${escapeHtml(store.config.shopName)}" style="margin-top:4px;margin-bottom:10px;">
+                <label style="font-size:12px;font-weight:600;color:var(--text-light);">WhatsApp (sans +226)</label>
+                <input type="tel" id="shopWhatsapp" placeholder="70123456" value="${escapeHtml(store.config.whatsappNum.replace('226',''))}" style="margin-top:4px;margin-bottom:10px;">
+                <label style="font-size:12px;font-weight:600;color:var(--text-light);">Message de pied de ticket</label>
+                <textarea id="footerMsg" rows="2" style="margin-top:4px;margin-bottom:10px;">${escapeHtml(store.config.footerMsg)}</textarea>
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600;color:var(--text-light);">URL App RH</label>
+                <input type="url" id="rhUrl" value="${escapeHtml(store.config.rhUrl||'')}" style="margin-top:4px;margin-bottom:10px;">
+                <label style="font-size:12px;font-weight:600;color:var(--text-light);">URL App Compta</label>
+                <input type="url" id="comptaUrl" value="${escapeHtml(store.config.comptaUrl||'')}" style="margin-top:4px;margin-bottom:10px;">
+                <label style="font-size:12px;font-weight:600;color:var(--text-light);">URL App Stock</label>
+                <input type="url" id="stockUrl" value="${escapeHtml(store.config.stockUrl||'')}" style="margin-top:4px;">
+            </div>
+        </div>
+        <button onclick="saveConfig()" style="margin-top:14px;">💾 Sauvegarder configuration</button>
+    </div>
+
+    <div class="card">
+        <h3>➕ Ajouter une dépense</h3>
+        <div class="flex-row">
+            <input type="text" id="depenseLibelle" placeholder="Libellé" style="flex:2">
+            <input type="number" id="depenseMontant" placeholder="Montant (CFA)" style="flex:1">
+            <input type="date" id="depenseDate" style="flex:1">
+            <button onclick="ajouterDepense()">Ajouter</button>
+        </div>
+    </div>`;
+
+    document.getElementById("mainContent").innerHTML = html;
+    afficherAdminPrestations();
+    afficherAdminDepenses();
+}
+
+function afficherAdminPrestations() {
+    const container = document.getElementById("adminPrestations");
+    if (!container) return;
+    const derniers = store.prestations.slice(0, 20);
+    if (!derniers.length) { container.innerHTML = '<p style="color:var(--text-light); font-size:13px;">Aucune prestation</p>'; return; }
+    let html = '<table><tr><th>Employé</th><th>Date</th><th>Prestation</th><th>Montant</th></tr>';
+    derniers.forEach(p => {
+        const emp = store.employes.find(e => e.id === p.employe_id);
+        html += `<tr><td>${emp ? escapeHtml(emp.prenom + ' ' + emp.nom) : '?'}</td><td>${p.date}</td><td>${escapeHtml(p.prestation_nom)}</td><td><strong>${(p.montant||0).toLocaleString('fr-FR')} CFA</strong></td></tr>`;
+    });
+    container.innerHTML = html + '</table>';
+}
+
+function afficherAdminDepenses() {
+    const container = document.getElementById("adminDepenses");
+    if (!container) return;
+    const derniers = store.depenses.slice(0, 10);
+    if (!derniers.length) { container.innerHTML = '<p style="color:var(--text-light); font-size:13px;">Aucune dépense</p>'; return; }
+    let html = '<table><tr><th>Date</th><th>Libellé</th><th>Montant</th><th></th></tr>';
+    derniers.forEach(d => {
+        html += `<tr><td>${d.date}</td><td>${escapeHtml(d.libelle)}</td><td><strong>${(d.montant||0).toLocaleString('fr-FR')} CFA</strong></td>
+        <td><button class="danger sm" onclick="supprimerDepense('${d.id}')">🗑️</button></td></tr>`;
+    });
+    container.innerHTML = html + '</table>';
+}
+
+function ajouterDepense() {
+    const libelle = document.getElementById("depenseLibelle").value.trim();
+    const montant = parseInt(document.getElementById("depenseMontant").value);
+    const date = document.getElementById("depenseDate").value;
+    if (!libelle || isNaN(montant) || montant <= 0 || !date) { toast("⚠️ Tous les champs sont requis", "error"); return; }
+    store.depenses.unshift({ id: Date.now().toString(), libelle, montant, date });
+    updateStore({ depenses: store.depenses });
+    afficherAdminDepenses();
+    document.getElementById("depenseLibelle").value = "";
+    document.getElementById("depenseMontant").value = "";
+    document.getElementById("depenseDate").value = "";
+    toast("✅ Dépense ajoutée", "success");
+}
+
+function supprimerDepense(id) {
+    if (!confirm("Supprimer cette dépense ?")) return;
+    store.depenses = store.depenses.filter(d => d.id !== id);
+    updateStore({ depenses: store.depenses });
+    afficherAdminDepenses();
+    toast("🗑️ Dépense supprimée");
+}
+
+function saveConfig() {
+    const whatsapp = document.getElementById("shopWhatsapp").value.replace(/\D/g,'');
+    store.config = {
+        ...store.config,
+        shopName:   document.getElementById("shopName").value.trim() || store.config.shopName,
+        whatsappNum: whatsapp.startsWith('226') ? whatsapp : '226' + whatsapp,
+        footerMsg:   document.getElementById("footerMsg").value,
+        rhUrl:       document.getElementById("rhUrl").value.trim(),
+        comptaUrl:   document.getElementById("comptaUrl").value.trim(),
+        stockUrl:    document.getElementById("stockUrl").value.trim()
+    };
+    updateStore({ config: store.config });
+    initExternalLinks();
+    toast("✅ Configuration sauvegardée", "success");
+}
+
+// ==================== MODULE PERSONNEL ====================
+let currentEmployeId = null;
+
+function renderPersonnel() {
+    let html = `<h2>👥 Gestion du personnel</h2>
+    <div class="grid-2">
+        <div class="card">
+            <h3>➕ Ajouter employé</h3>
+            <div style="display:grid; gap:8px;">
+                <input type="text" id="empNom" placeholder="Nom">
+                <input type="text" id="empPrenom" placeholder="Prénom">
+                <input type="tel" id="empWhatsapp" placeholder="WhatsApp (ex: 70123456)">
+                <input type="number" id="empTarif" placeholder="Tarif horaire (F CFA)">
+                <button onclick="ajouterEmploye()">➕ Ajouter</button>
+            </div>
+        </div>
+        <div class="card">
+            <h3>📋 Liste des employés (${store.employes.length})</h3>
+            <div id="listeEmployes"></div>
+        </div>
+    </div>
+    <div class="card">
+        <h3>👤 Espace prestations employé</h3>
+        <select id="selectEmploye" onchange="chargerPrestations()">
+            <option value="">-- Choisir un employé --</option>
+            ${store.employes.map(e => `<option value="${e.id}">${escapeHtml(e.prenom)} ${escapeHtml(e.nom)}</option>`).join('')}
+        </select>
+        <div id="zoneEmploye" style="display:none; margin-top:14px;">
+            <div class="flex-row" style="margin-bottom:10px;">
+                <input type="text" id="prestaNom" placeholder="Prestation" style="flex:2">
+                <input type="number" id="prestaMontant" placeholder="Montant (CFA)" style="flex:1">
+                <button onclick="ajouterPrestation()">Ajouter</button>
+            </div>
+            <div id="prestationsList"></div>
+            <div id="totalJour" class="total" style="display:none;"></div>
+            <div class="flex-row" style="margin-top:12px;">
+                <button onclick="imprimerTicketPerso()" class="success">🖨️ Imprimer</button>
+                <button onclick="bluetoothPerso()" class="bluetooth">🔵 Bluetooth</button>
+                <button onclick="whatsappPerso()" class="whatsapp">📱 WhatsApp</button>
+            </div>
+        </div>
+    </div>`;
+
+    document.getElementById("mainContent").innerHTML = html;
+    afficherEmployes();
+}
+
+function afficherEmployes() {
+    const container = document.getElementById("listeEmployes");
+    if (!container) return;
+    if (!store.employes.length) { container.innerHTML = '<p style="color:var(--text-light); font-size:13px;">Aucun employé</p>'; return; }
+    let html = '<table><tr><th>Nom</th><th>Prénom</th><th>WhatsApp</th><th>Tarif/h</th><th></th></tr>';
+    store.employes.forEach(e => {
+        html += `<tr>
+            <td>${escapeHtml(e.nom)}</td>
+            <td>${escapeHtml(e.prenom)}</td>
+            <td>${e.whatsapp ? '+226 ' + e.whatsapp : '<span style="color:var(--text-light)">—</span>'}</td>
+            <td>${(e.tarif_horaire||0).toLocaleString('fr-FR')} CFA</td>
+            <td><button class="danger sm" onclick="supprimerEmploye('${e.id}')">🗑️</button></td>
+        </tr>`;
+    });
+    container.innerHTML = html + '</table>';
+}
+
+function ajouterEmploye() {
+    const nom    = document.getElementById("empNom").value.trim();
+    const prenom = document.getElementById("empPrenom").value.trim();
+    const whatsapp = document.getElementById("empWhatsapp").value.replace(/\D/g,'');
+    const tarif  = parseInt(document.getElementById("empTarif").value) || 1500;
+    if (!nom || !prenom) { toast("⚠️ Remplissez nom et prénom", "error"); return; }
+    store.employes.push({ id: Date.now().toString(), nom, prenom, whatsapp, tarif_horaire: tarif });
+    updateStore({ employes: store.employes });
+    afficherEmployes();
+    // Refresh select
+    const sel = document.getElementById("selectEmploye");
+    if (sel) {
+        sel.innerHTML = '<option value="">-- Choisir un employé --</option>' +
+            store.employes.map(e => `<option value="${e.id}">${escapeHtml(e.prenom)} ${escapeHtml(e.nom)}</option>`).join('');
+    }
+    ["empNom","empPrenom","empWhatsapp","empTarif"].forEach(id => { document.getElementById(id).value = ""; });
+    toast("✅ Employé ajouté", "success");
+}
+
+function supprimerEmploye(id) {
+    if (!confirm("Supprimer cet employé et ses prestations ?")) return;
+    store.employes    = store.employes.filter(e => e.id !== id);
+    store.prestations = store.prestations.filter(p => p.employe_id !== id);
+    updateStore({ employes: store.employes, prestations: store.prestations });
+    afficherEmployes();
+    if (currentEmployeId === id) { document.getElementById("zoneEmploye").style.display = "none"; currentEmployeId = null; }
+    toast("🗑️ Employé supprimé");
+}
+
+function chargerPrestations() {
+    const empId = document.getElementById("selectEmploye").value;
+    const zone = document.getElementById("zoneEmploye");
+    if (!empId) { zone.style.display = "none"; return; }
+    currentEmployeId = empId;
+    zone.style.display = "block";
+    const today = new Date().toISOString().split('T')[0];
+    const list = store.prestations.filter(p => p.employe_id === empId && p.date === today);
+    const container = document.getElementById("prestationsList");
+    let total = 0, html = '';
+    if (!list.length) {
+        container.innerHTML = '<p style="color:var(--text-light); font-size:13px; margin:8px 0;">Aucune prestation aujourd\'hui</p>';
+    } else {
+        html = '<table><tr><th>Heure</th><th>Prestation</th><th>Montant</th></tr>';
+        list.forEach(p => {
+            total += p.montant || 0;
+            html += `<tr><td>${p.heure}</td><td>${escapeHtml(p.prestation_nom)}</td><td>${(p.montant||0).toLocaleString('fr-FR')} CFA</td></tr>`;
+        });
+        container.innerHTML = html + '</table>';
+    }
+    const totalEl = document.getElementById("totalJour");
+    totalEl.style.display = total > 0 ? "block" : "none";
+    totalEl.innerHTML = `💰 Total journée : ${total.toLocaleString('fr-FR')} F CFA`;
+}
+
+function ajouterPrestation() {
+    const empId   = document.getElementById("selectEmploye").value;
+    const nom     = document.getElementById("prestaNom").value.trim();
+    const montant = parseInt(document.getElementById("prestaMontant").value);
+    if (!empId || !nom || isNaN(montant) || montant <= 0) { toast("⚠️ Remplissez tous les champs", "error"); return; }
+    const today = new Date().toISOString().split('T')[0];
+    const heure = new Date().toLocaleTimeString('fr-FR', { hour12: false }).slice(0,5);
+    store.prestations.push({ id: Date.now().toString(), employe_id: empId, date: today, prestation_nom: nom, montant, heure });
+    updateStore({ prestations: store.prestations });
+    chargerPrestations();
+    document.getElementById("prestaNom").value = "";
+    document.getElementById("prestaMontant").value = "";
+    toast("✅ Prestation ajoutée", "success");
+}
+
+function getTicketPerso() {
+    const emp   = store.employes.find(e => e.id === currentEmployeId);
+    const today = new Date().toISOString().split('T')[0];
+    const list  = store.prestations.filter(p => p.employe_id === currentEmployeId && p.date === today);
+    let total = 0, lignes = "";
+    list.forEach(p => { total += p.montant||0; lignes += `${p.heure} - ${p.prestation_nom} : ${(p.montant||0).toLocaleString('fr-FR')} F CFA\n`; });
+    return `${store.config.shopName}\nSUIVI PRESTATIONS\n📅 ${new Date().toLocaleDateString('fr-FR')}\n👤 ${emp ? emp.prenom+' '+emp.nom : '?'}\n----------------------------------------\n${lignes}\n----------------------------------------\n💰 TOTAL : ${total.toLocaleString('fr-FR')} F CFA\n${store.config.footerMsg}`;
+}
+
+function imprimerTicketPerso() {
+    const win = window.open('', '_blank');
+    win.document.write(`<pre style="font-family:monospace; width:72mm; margin:auto;">${getTicketPerso()}</pre>`);
+    win.document.close();
+    win.print();
+}
+
+async function bluetoothPerso() {
+    if (!navigator.bluetooth) { toast("⚠️ Bluetooth non supporté sur ce navigateur", "error"); return; }
+    await envoyerBluetooth(getTicketPerso());
+}
+
+function whatsappPerso() {
+    const emp = store.employes.find(e => e.id === currentEmployeId);
+    if (!emp?.whatsapp) { toast("⚠️ WhatsApp non renseigné pour cet employé", "error"); return; }
+    let num = emp.whatsapp.replace(/\D/g,'');
+    if (!num.startsWith('226')) num = '226' + num;
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(getTicketPerso())}`, '_blank');
+}
+
+// ==================== MODULE POS ====================
+let panierPOS = [];
+
+function renderPOS() {
+    let html = `<h2>🛒 Point de vente</h2>
+    <div class="grid-2">
+        <div class="card">
+            <h3>🔎 Produits disponibles</h3>
+            <div class="flex-row" style="margin-bottom:10px;">
+                <input type="text" id="searchProd" placeholder="Rechercher un produit..." style="flex:1" oninput="afficherProduitsPOS(this.value)">
+            </div>
+            <div id="listeProduitsPOS"></div>
+        </div>
+        <div class="card">
+            <h3>🛒 Panier</h3>
+            <div id="panierPOS"></div>
+            <div id="totalPOS"></div>
+            <div class="flex-row" style="margin-top:12px;">
+                <button onclick="validerPOS(true)" class="success">✅ Valider & imprimer</button>
+                <button onclick="validerPOS(false)" class="secondary">✅ Valider</button>
+                <button onclick="viderPanierPOS()" class="danger">🗑️ Vider</button>
+            </div>
+            <button onclick="bluetoothPOS()" class="bluetooth" style="margin-top:8px; width:100%;">🔵 Réimprimer dernier ticket (Bluetooth)</button>
+        </div>
+    </div>`;
+    document.getElementById("mainContent").innerHTML = html;
+    afficherProduitsPOS("");
+    afficherPanierPOS();
+}
+
+function afficherProduitsPOS(recherche) {
+    const liste = store.produits.filter(p => p.nom.toLowerCase().includes((recherche||"").toLowerCase()));
+    const container = document.getElementById("listeProduitsPOS");
+    if (!container) return;
+    if (!liste.length) { container.innerHTML = '<p style="color:var(--text-light); font-size:13px;">Aucun produit trouvé</p>'; return; }
+    let html = "";
+    liste.forEach(p => {
+        const stockClass = p.stock < 5 ? 'low' : 'ok';
+        html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--border);">
+            <span>${escapeHtml(p.nom)} — <strong>${(p.prix||0).toLocaleString('fr-FR')} CFA</strong> <span class="badge-stock ${stockClass}">Stock: ${p.stock}</span></span>
+            <button class="sm" onclick="ajouterPOS('${p.id}')" ${p.stock <= 0 ? 'disabled style="opacity:0.4"' : ''}>+</button>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+function rechercherProd() { afficherProduitsPOS(document.getElementById("searchProd").value); }
+
+function ajouterPOS(id) {
+    const prod = store.produits.find(p => p.id === id);
+    if (!prod || prod.stock <= 0) { toast("⚠️ Stock insuffisant", "error"); return; }
+    const item = panierPOS.find(i => i.id === id);
+    if (item) {
+        if (item.qty >= prod.stock) { toast("⚠️ Stock maximum atteint", "error"); return; }
+        item.qty++;
+    } else {
+        panierPOS.push({ id: prod.id, nom: prod.nom, prix: prod.prix, qty: 1 });
+    }
+    afficherPanierPOS();
+}
+
+function afficherPanierPOS() {
+    const container = document.getElementById("panierPOS");
+    const totalEl   = document.getElementById("totalPOS");
+    if (!container) return;
+    let total = 0, html = "";
+    panierPOS.forEach((item, idx) => {
+        const ligne = (item.prix||0) * item.qty;
+        total += ligne;
+        html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border);">
+            <span>${escapeHtml(item.nom)} × ${item.qty} = <strong>${ligne.toLocaleString('fr-FR')} CFA</strong></span>
+            <button class="danger sm" onclick="retirerPOS(${idx})">❌</button>
+        </div>`;
+    });
+    container.innerHTML = html || '<p style="color:var(--text-light); font-size:13px; padding:10px 0;">Panier vide</p>';
+    if (totalEl) {
+        totalEl.className = total > 0 ? "total" : "";
+        totalEl.innerHTML = total > 0 ? `Total : ${total.toLocaleString('fr-FR')} CFA` : "";
+    }
+}
+
+function retirerPOS(idx) { panierPOS.splice(idx,1); afficherPanierPOS(); }
+function viderPanierPOS() { panierPOS = []; afficherPanierPOS(); }
+
+function validerPOS(imprimer) {
+    if (!panierPOS.length) { toast("⚠️ Panier vide", "error"); return; }
+    for (const item of panierPOS) {
+        const prod = store.produits.find(p => p.id === item.id);
+        if (!prod || prod.stock < item.qty) { toast(`⚠️ Stock insuffisant : ${item.nom}`, "error"); return; }
+    }
+    for (const item of panierPOS) {
+        store.produits.find(p => p.id === item.id).stock -= item.qty;
+    }
+    const total = panierPOS.reduce((s,i) => s + (i.prix||0)*i.qty, 0);
+    const vente = { id: Date.now().toString(), date: new Date().toISOString(), total, items: [...panierPOS] };
+    store.ventes.unshift(vente);
+    updateStore({ produits: store.produits, ventes: store.ventes });
+    if (imprimer) imprimerTicketPOS(vente);
+    viderPanierPOS();
+    afficherProduitsPOS(document.getElementById("searchProd")?.value || "");
+    toast("✅ Vente enregistrée", "success");
+}
+
+function imprimerTicketPOS(vente) {
+    const date = new Date(vente.date).toLocaleString('fr-FR');
+    let lignes = `${store.config.shopName}\n${date}\n------------------------\n`;
+    vente.items.forEach(i => { lignes += `${i.nom} x${i.qty} : ${((i.prix||0)*i.qty).toLocaleString('fr-FR')} CFA\n`; });
+    lignes += `------------------------\nTOTAL: ${(vente.total||0).toLocaleString('fr-FR')} CFA\n${store.config.footerMsg}`;
+    const win = window.open('', '_blank');
+    win.document.write(`<pre style="font-family:monospace; width:72mm; margin:auto;">${lignes}</pre>`);
+    win.document.close();
+    win.print();
+}
+
+async function bluetoothPOS() {
+    if (!store.ventes.length) { toast("⚠️ Aucune vente à imprimer", "error"); return; }
+    const vente = store.ventes[0];
+    let lignes = `${store.config.shopName}\n${new Date(vente.date).toLocaleString('fr-FR')}\n------------------------\n`;
+    vente.items.forEach(i => { lignes += `${i.nom} x${i.qty} : ${((i.prix||0)*i.qty).toLocaleString('fr-FR')} CFA\n`; });
+    lignes += `------------------------\nTOTAL: ${(vente.total||0).toLocaleString('fr-FR')} CFA\n${store.config.footerMsg}\n\n\n`;
+    await envoyerBluetooth(lignes);
+}
+
+// ==================== BLUETOOTH PARTAGÉ ====================
+async function envoyerBluetooth(texte) {
+    if (!navigator.bluetooth) { toast("⚠️ Web Bluetooth non supporté", "error"); return; }
+    try {
+        const device = await navigator.bluetooth.requestDevice({ filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }] });
+        const server  = await device.gatt.connect();
+        const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+        let char;
+        try { char = await service.getCharacteristic('00002af0-0000-1000-8000-00805f9b34fb'); }
+        catch(e) { char = await service.getCharacteristic('000018f1-0000-1000-8000-00805f9b34fb'); }
+        const encoder = new TextEncoder();
+        const cmd = [0x1B, 0x40, ...encoder.encode(texte + "\n\n\n"), 0x1D, 0x56, 0x42, 0x00];
+        await char.writeValue(new Uint8Array(cmd));
+        await server.disconnect();
+        toast("✅ Impression Bluetooth envoyée", "success");
+    } catch(e) {
+        toast("⚠️ Bluetooth: " + e.message, "error");
+    }
+}
+
+// ==================== MODULE CATALOGUE ====================
+function renderCatalogue() {
+    let html = `<h2>📦 Catalogue produits & services</h2>
+    <div class="card">
+        <h3>➕ Ajouter un produit/service</h3>
+        <div class="flex-row">
+            <input type="text" id="catNom" placeholder="Nom" style="flex:2">
+            <input type="number" id="catPrix" placeholder="Prix (CFA)" style="flex:1">
+            <input type="number" id="catStock" placeholder="Stock initial" style="flex:1">
+            <select id="catType" style="flex:1">
+                <option value="produit">📦 Produit</option>
+                <option value="service">✂️ Service</option>
+            </select>
+            <button onclick="ajouterCatalogue()">Ajouter</button>
+        </div>
+    </div>
+    <div class="card">
+        <h3>📋 Catalogue (${store.produits.length} articles)</h3>
+        <div id="catalogueList"></div>
+    </div>`;
+    document.getElementById("mainContent").innerHTML = html;
+    afficherCatalogue();
+}
+
+function afficherCatalogue() {
+    const container = document.getElementById("catalogueList");
+    if (!container) return;
+    if (!store.produits.length) { container.innerHTML = '<p style="color:var(--text-light); font-size:13px;">Aucun article dans le catalogue</p>'; return; }
+    let html = '<table><tr><th>Nom</th><th>Prix</th><th>Stock</th><th>Type</th><th></th></tr>';
+    store.produits.forEach(p => {
+        const stockClass = p.stock < 5 ? 'low' : 'ok';
+        html += `<tr>
+            <td>${escapeHtml(p.nom)}</td>
+            <td><strong>${(p.prix||0).toLocaleString('fr-FR')} CFA</strong></td>
+            <td><span class="badge-stock ${stockClass}">${p.stock}</span> <input type="number" value="${p.stock}" min="0" style="width:70px;display:inline-block;" onchange="modifStockCatalogue('${p.id}', this.value)"></td>
+            <td>${p.type === 'service' ? '✂️ Service' : '📦 Produit'}</td>
+            <td><button class="danger sm" onclick="supprCatalogue('${p.id}')">🗑️</button></td>
+        </tr>`;
+    });
+    container.innerHTML = html + '</table>';
+}
+
+function ajouterCatalogue() {
+    const nom   = document.getElementById("catNom").value.trim();
+    const prix  = parseInt(document.getElementById("catPrix").value);
+    const stock = parseInt(document.getElementById("catStock").value) || 0;
+    const type  = document.getElementById("catType").value;
+    if (!nom || isNaN(prix) || prix < 0) { toast("⚠️ Nom et prix valides requis", "error"); return; }
+    store.produits.push({ id: Date.now().toString(), nom, prix, stock, type });
+    updateStore({ produits: store.produits });
+    afficherCatalogue();
+    ["catNom","catPrix","catStock"].forEach(id => { document.getElementById(id).value = ""; });
+    toast("✅ Article ajouté au catalogue", "success");
+}
+
+function modifStockCatalogue(id, val) {
+    const p = store.produits.find(p => p.id === id);
+    if (p) p.stock = Math.max(0, parseInt(val) || 0);
+    updateStore({ produits: store.produits });
+    afficherCatalogue();
+}
+
+function supprCatalogue(id) {
+    if (!confirm("Supprimer cet article du catalogue ?")) return;
+    store.produits = store.produits.filter(p => p.id !== id);
+    updateStore({ produits: store.produits });
+    afficherCatalogue();
+    toast("🗑️ Article supprimé");
+}
+
+// ==================== MODULE PROFORMA ====================
+let panierPro = [];
+
+function renderProforma() {
+    let html = `<h2>📄 Facture proforma</h2>
+    <div class="grid-2">
+        <div class="card">
+            <h3>🔎 Sélectionner articles</h3>
+            <input type="text" id="clientPro" placeholder="Nom du client" style="margin-bottom:10px;">
+            <div class="flex-row" style="margin-bottom:10px;">
+                <input type="text" id="searchPro" placeholder="Rechercher..." style="flex:1" oninput="afficherPro(this.value)">
+            </div>
+            <div id="listePro"></div>
+        </div>
+        <div class="card">
+            <h3>🛒 Panier proforma</h3>
+            <div id="panierPro"></div>
+            <div id="totalPro"></div>
+            <div class="flex-row" style="margin-top:12px;">
+                <button onclick="genererPro()" class="success">📄 Générer facture</button>
+                <button onclick="viderPanierPro()" class="danger">🗑️ Vider</button>
+            </div>
+        </div>
+    </div>
+    <div id="apercuPro"></div>`;
+    document.getElementById("mainContent").innerHTML = html;
+    afficherPro("");
+    afficherPanierPro();
+}
+
+function afficherPro(rech) {
+    const liste = store.produits.filter(p => p.nom.toLowerCase().includes((rech||"").toLowerCase()));
+    const container = document.getElementById("listePro");
+    if (!container) return;
+    let html = "";
+    liste.forEach(p => {
+        html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border);">
+            <span>${escapeHtml(p.nom)} — <strong>${(p.prix||0).toLocaleString('fr-FR')} CFA</strong></span>
+            <button class="sm" onclick="ajouterPro('${p.id}')">+</button>
+        </div>`;
+    });
+    container.innerHTML = html || '<p style="color:var(--text-light); font-size:13px;">Aucun article</p>';
+}
+
+function rechPro() { afficherPro(document.getElementById("searchPro").value); }
+
+function ajouterPro(id) {
+    const prod = store.produits.find(p => p.id === id);
+    if (!prod) return;
+    const item = panierPro.find(i => i.id === id);
+    if (item) item.qty++;
+    else panierPro.push({ id: prod.id, nom: prod.nom, prix: prod.prix, qty: 1 });
+    afficherPanierPro();
+}
+
+function afficherPanierPro() {
+    const container = document.getElementById("panierPro");
+    const totalEl   = document.getElementById("totalPro");
+    let total = 0, html = "";
+    panierPro.forEach((item, idx) => {
+        const ligne = (item.prix||0) * item.qty;
+        total += ligne;
+        html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border);">
+            <span>${escapeHtml(item.nom)} × ${item.qty} = <strong>${ligne.toLocaleString('fr-FR')} CFA</strong></span>
+            <button class="danger sm" onclick="retirerPro(${idx})">❌</button>
+        </div>`;
+    });
+    if (container) container.innerHTML = html || '<p style="color:var(--text-light); font-size:13px;">Panier vide</p>';
+    if (totalEl) {
+        totalEl.className = total > 0 ? "total" : "";
+        totalEl.innerHTML = total > 0 ? `Total : ${total.toLocaleString('fr-FR')} CFA` : "";
+    }
+}
+
+function retirerPro(idx) { panierPro.splice(idx,1); afficherPanierPro(); }
+function viderPanierPro() { panierPro = []; afficherPanierPro(); }
+
+function genererPro() {
+    const client = document.getElementById("clientPro").value.trim();
+    if (!client) { toast("⚠️ Nom du client requis", "error"); return; }
+    if (!panierPro.length) { toast("⚠️ Ajoutez des articles au panier", "error"); return; }
+    const total = panierPro.reduce((s,i) => s + (i.prix||0)*i.qty, 0);
+    const facture = { id: Date.now().toString(), date: new Date().toISOString(), client, items: [...panierPro], total };
+    store.facturesProforma.unshift(facture);
+    updateStore({ facturesProforma: store.facturesProforma });
+
+    let lignesHtml = panierPro.map(i => `<li>${escapeHtml(i.nom)} × ${i.qty} = <strong>${((i.prix||0)*i.qty).toLocaleString('fr-FR')} CFA</strong></li>`).join('');
+    const apercu = `<div class="card" style="border:2px solid var(--primary); margin-top:16px;">
+        <h3>📄 PROFORMA — ${escapeHtml(client)}</h3>
+        <p style="color:var(--text-light); font-size:13px; margin-bottom:8px;">Date : ${new Date().toLocaleDateString('fr-FR')}</p>
+        <ul style="padding-left:16px; margin-bottom:12px;">${lignesHtml}</ul>
+        <div class="total">Total : ${total.toLocaleString('fr-FR')} CFA</div>
+        <div class="flex-row" style="margin-top:12px;">
+            <button onclick="imprimerPro('${facture.id}')" class="success">🖨️ Imprimer</button>
+            <button onclick="whatsappPro('${facture.id}')" class="whatsapp">📱 WhatsApp</button>
+        </div>
+    </div>`;
+    document.getElementById("apercuPro").innerHTML = apercu;
+    viderPanierPro();
+    toast("✅ Facture proforma générée", "success");
+}
+
+function imprimerPro(id) {
+    const fact = store.facturesProforma.find(f => f.id === id);
+    if (!fact) return;
+    let lignes = `${store.config.shopName}\nPROFORMA\nClient: ${fact.client}\nDate: ${new Date(fact.date).toLocaleDateString('fr-FR')}\n------------------------\n`;
+    fact.items.forEach(i => { lignes += `${i.nom} x${i.qty} : ${((i.prix||0)*i.qty).toLocaleString('fr-FR')} CFA\n`; });
+    lignes += `------------------------\nTOTAL: ${(fact.total||0).toLocaleString('fr-FR')} CFA\n${store.config.footerMsg}`;
+    const win = window.open('', '_blank');
+    win.document.write(`<pre style="font-family:monospace; width:72mm; margin:auto;">${lignes}</pre>`);
+    win.document.close();
+    win.print();
+}
+
+function whatsappPro(id) {
+    const fact = store.facturesProforma.find(f => f.id === id);
+    if (!fact) return;
+    let texte = `PROFORMA\nClient: ${fact.client}\nTotal: ${(fact.total||0).toLocaleString('fr-FR')} CFA\n${store.config.footerMsg}`;
+    let num = store.config.whatsappNum.replace(/\D/g,'');
+    if (!num.startsWith('226')) num = '226' + num;
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(texte)}`, '_blank');
+}
+
+// ==================== UTILITAIRES ====================
+function escapeHtml(str) {
+    if (typeof str !== 'string') return str ?? '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ==================== EXPOSE GLOBALES (onclick) ====================
+Object.assign(window, {
+    login, logout, loadModule, saveConfig,
+    ajouterDepense, supprimerDepense,
+    ajouterEmploye, supprimerEmploye, chargerPrestations, ajouterPrestation,
+    imprimerTicketPerso, bluetoothPerso, whatsappPerso,
+    rechercherProd, ajouterPOS, retirerPOS, viderPanierPOS, validerPOS, bluetoothPOS,
+    ajouterCatalogue, modifStockCatalogue, supprCatalogue,
+    rechPro, ajouterPro, retirerPro, viderPanierPro, genererPro, imprimerPro, whatsappPro
+});
+
+// Navigation par délégation (plus propre)
+document.querySelectorAll(".module-btn").forEach(btn => {
+    btn.addEventListener("click", () => loadModule(btn.dataset.module));
+});
+</script>
+</body>
+</html>

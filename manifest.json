@@ -1,0 +1,45 @@
+{
+  "name": "Dashboard Pro - Burkina Faso",
+  "short_name": "Dashboard Pro",
+  "description": "Dashboard de gestion : POS, Personnel, Catalogue, Proforma",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f0f2f5",
+  "theme_color": "#1a5276",
+  "lang": "fr",
+  "scope": "/",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "https://placehold.co/192x192/1a5276/ffffff?text=DP",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://placehold.co/512x512/1a5276/ffffff?text=DP",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Point de vente",
+      "short_name": "POS",
+      "description": "Ouvrir la caisse",
+      "url": "/?module=pos",
+      "icons": [{ "src": "https://placehold.co/96x96/2a9d8f/ffffff?text=POS", "sizes": "96x96" }]
+    },
+    {
+      "name": "Personnel",
+      "short_name": "RH",
+      "description": "Gérer le personnel",
+      "url": "/?module=personnel",
+      "icons": [{ "src": "https://placehold.co/96x96/2c7da0/ffffff?text=RH", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
