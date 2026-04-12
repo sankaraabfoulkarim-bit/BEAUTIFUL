@@ -343,6 +343,7 @@
             <button class="module-btn" data-module="pos">🛒 POS</button>
             <button class="module-btn" data-module="catalogue">📦 Catalogue</button>
             <button class="module-btn" data-module="proforma">📄 Proforma</button>
+            <button class="module-btn" data-module="historique">📊 Historique</button>
         </div>
 
         <div class="content-area" id="mainContent">
@@ -593,7 +594,8 @@ function loadModule(module) {
         personnel: renderPersonnel,
         pos: renderPOS,
         catalogue: renderCatalogue,
-        proforma: renderProforma
+        proforma: renderProforma,
+        historique: renderHistorique
     };
     if (renders[module]) renders[module]();
 }
@@ -1026,23 +1028,119 @@ async function bluetoothPOS() {
     await envoyerBluetooth(lignes);
 }
 
-// ==================== BLUETOOTH PARTAGÉ ====================
+// ==================== BLUETOOTH BLE — POS80C ====================
+// UUIDs spécifiques imprimante thermique BLE (POS80C et compatibles)
+const BLE_PRINTER = {
+    // Service principal impression BLE
+    SERVICE:  '000018f0-0000-1000-8000-00805f9b34fb',
+    WRITE:    '00002af1-0000-1000-8000-00805f9b34fb',
+    // Fallback service générique SPP over BLE
+    SERVICE2: '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+    WRITE2:   '49535343-8841-43f4-a8d4-ecbe34729bb3',
+    // Fallback générique imprimante
+    SERVICE3: 'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+    WRITE3:   'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f',
+    CHUNK:    180  // MTU BLE sécurisé (évite les coupures)
+};
+
+// Commandes ESC/POS
+function escPos(texte) {
+    const enc = new TextEncoder();
+    // ESC @ = init | texte | couper papier
+    return new Uint8Array([
+        0x1B, 0x40,           // Init imprimante
+        0x1B, 0x61, 0x01,     // Centrer
+        ...enc.encode(texte),
+        0x0A, 0x0A, 0x0A,     // 3 sauts de ligne
+        0x1D, 0x56, 0x41, 0x00 // Couper papier
+    ]);
+}
+
+// Envoi par chunks (BLE MTU ~180 bytes max)
+async function writeChunks(char, data) {
+    const size = BLE_PRINTER.CHUNK;
+    for (let i = 0; i < data.length; i += size) {
+        await char.writeValueWithoutResponse(data.slice(i, i + size));
+        await new Promise(r => setTimeout(r, 30)); // délai inter-chunk
+    }
+}
+
+// Connexion BLE avec essai sur plusieurs UUIDs (robustesse POS80C)
+async function connecterImprimante() {
+    const strategies = [
+        { filter: BLE_PRINTER.SERVICE,  write: BLE_PRINTER.WRITE  },
+        { filter: BLE_PRINTER.SERVICE2, write: BLE_PRINTER.WRITE2 },
+        { filter: BLE_PRINTER.SERVICE3, write: BLE_PRINTER.WRITE3 },
+    ];
+
+    // On propose tous les services connus + acceptedAllDevices en fallback
+    const device = await navigator.bluetooth.requestDevice({
+        filters: [
+            { services: [BLE_PRINTER.SERVICE]  },
+            { services: [BLE_PRINTER.SERVICE2] },
+            { services: [BLE_PRINTER.SERVICE3] },
+            { namePrefix: 'POS' },
+            { namePrefix: 'Printer' },
+            { namePrefix: 'BlueTooth' },
+        ],
+        optionalServices: [
+            BLE_PRINTER.SERVICE, BLE_PRINTER.SERVICE2, BLE_PRINTER.SERVICE3
+        ]
+    });
+
+    const server = await device.gatt.connect();
+
+    for (const s of strategies) {
+        try {
+            const service = await server.getPrimaryService(s.filter);
+            const char    = await service.getCharacteristic(s.write);
+            return { server, char };
+        } catch(_) { /* essai suivant */ }
+    }
+
+    // Dernier recours : scanner tous les services disponibles
+    const services = await server.getPrimaryServices();
+    for (const svc of services) {
+        const chars = await svc.getCharacteristics();
+        for (const c of chars) {
+            if (c.properties.writeWithoutResponse || c.properties.write) {
+                return { server, char: c };
+            }
+        }
+    }
+
+    server.disconnect();
+    throw new Error("Aucune caractéristique d'écriture trouvée sur cette imprimante");
+}
+
+let bleDevice = null; // garde la connexion active entre impressions
+
 async function envoyerBluetooth(texte) {
-    if (!navigator.bluetooth) { toast("⚠️ Web Bluetooth non supporté", "error"); return; }
+    if (!navigator.bluetooth) {
+        toast("⚠️ Web Bluetooth non supporté — utilisez Chrome/Edge", "error", 5000);
+        return;
+    }
+    toast("🔵 Connexion à l'imprimante...", "default", 8000);
     try {
-        const device = await navigator.bluetooth.requestDevice({ filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }] });
-        const server  = await device.gatt.connect();
-        const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-        let char;
-        try { char = await service.getCharacteristic('00002af0-0000-1000-8000-00805f9b34fb'); }
-        catch(e) { char = await service.getCharacteristic('000018f1-0000-1000-8000-00805f9b34fb'); }
-        const encoder = new TextEncoder();
-        const cmd = [0x1B, 0x40, ...encoder.encode(texte + "\n\n\n"), 0x1D, 0x56, 0x42, 0x00];
-        await char.writeValue(new Uint8Array(cmd));
-        await server.disconnect();
-        toast("✅ Impression Bluetooth envoyée", "success");
+        // Réutiliser la connexion si déjà établie
+        if (bleDevice && bleDevice.server && bleDevice.server.connected) {
+            await writeChunks(bleDevice.char, escPos(texte));
+        } else {
+            const { server, char } = await connecterImprimante();
+            bleDevice = { server, char };
+            await writeChunks(char, escPos(texte));
+        }
+        toast("✅ Impression envoyée à l'imprimante", "success");
     } catch(e) {
-        toast("⚠️ Bluetooth: " + e.message, "error");
+        bleDevice = null;
+        const msg = e.message || String(e);
+        if (msg.includes('User cancelled') || msg.includes('chooser')) {
+            toast("❌ Sélection annulée", "default");
+        } else if (msg.includes('GATT')) {
+            toast("⚠️ Erreur GATT — réessayez ou redémarrez l'imprimante", "error", 5000);
+        } else {
+            toast("⚠️ BLE: " + msg, "error", 5000);
+        }
     }
 }
 
@@ -1239,6 +1337,141 @@ function whatsappPro(id) {
     window.open(`https://wa.me/${num}?text=${encodeURIComponent(texte)}`, '_blank');
 }
 
+// ==================== MODULE HISTORIQUE & ANNULATIONS ====================
+function renderHistorique() {
+    const totalCA = store.ventes.reduce((s, v) => s + (v.annulee ? 0 : v.total || 0), 0);
+    const ventesActives = store.ventes.filter(v => !v.annulee);
+    const ventesAnnulees = store.ventes.filter(v => v.annulee);
+
+    // Regrouper par jour
+    const parJour = {};
+    ventesActives.forEach(v => {
+        const jour = v.date ? v.date.split('T')[0] : '?';
+        if (!parJour[jour]) parJour[jour] = { total: 0, nb: 0 };
+        parJour[jour].total += v.total || 0;
+        parJour[jour].nb++;
+    });
+    const jours = Object.keys(parJour).sort((a,b) => b.localeCompare(a)).slice(0, 7);
+
+    let html = `<h2>📊 Historique des ventes</h2>
+    <div class="kpi-grid" style="margin-bottom:16px;">
+        <div class="kpi-card">
+            <div class="kpi-val">${totalCA.toLocaleString('fr-FR')}</div>
+            <div class="kpi-label">💰 CA total (CFA)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-val">${ventesActives.length}</div>
+            <div class="kpi-label">✅ Ventes valides</div>
+        </div>
+        <div class="kpi-card alert">
+            <div class="kpi-val">${ventesAnnulees.length}</div>
+            <div class="kpi-label">❌ Ventes annulées</div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px;">
+        <h3>📅 CA par jour (7 derniers jours)</h3>
+        <table>
+            <tr><th>Date</th><th>Nb ventes</th><th>CA journée</th></tr>
+            ${jours.map(j => `
+            <tr>
+                <td>${new Date(j).toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short'})}</td>
+                <td>${parJour[j].nb}</td>
+                <td><strong>${parJour[j].total.toLocaleString('fr-FR')} CFA</strong></td>
+            </tr>`).join('') || '<tr><td colspan="3" style="color:var(--text-light)">Aucune vente</td></tr>'}
+        </table>
+    </div>
+
+    <div class="card">
+        <h3>🧾 Toutes les ventes (${store.ventes.length})</h3>
+        <div class="flex-row" style="margin-bottom:10px;">
+            <input type="text" id="searchVente" placeholder="Rechercher article..." style="flex:1" oninput="filtrerHistorique(this.value)">
+            <select id="filtreStatut" onchange="filtrerHistorique(document.getElementById('searchVente').value)" style="width:auto;">
+                <option value="toutes">Toutes</option>
+                <option value="valides">✅ Valides seulement</option>
+                <option value="annulees">❌ Annulées seulement</option>
+            </select>
+        </div>
+        <div id="listeHistorique"></div>
+    </div>`;
+
+    document.getElementById("mainContent").innerHTML = html;
+    filtrerHistorique("");
+}
+
+function filtrerHistorique(recherche) {
+    const statut = document.getElementById("filtreStatut")?.value || "toutes";
+    let liste = store.ventes;
+    if (statut === "valides")   liste = liste.filter(v => !v.annulee);
+    if (statut === "annulees")  liste = liste.filter(v => v.annulee);
+    if (recherche) {
+        const r = recherche.toLowerCase();
+        liste = liste.filter(v => v.items?.some(i => i.nom.toLowerCase().includes(r)));
+    }
+    afficherHistorique(liste);
+}
+
+function afficherHistorique(liste) {
+    const container = document.getElementById("listeHistorique");
+    if (!container) return;
+    if (!liste.length) {
+        container.innerHTML = '<p style="color:var(--text-light); font-size:13px; padding:10px 0;">Aucune vente trouvée</p>';
+        return;
+    }
+    let html = '<table><tr><th>Date/Heure</th><th>Articles</th><th>Total</th><th>Statut</th><th>Actions</th></tr>';
+    liste.forEach(v => {
+        const date = v.date ? new Date(v.date).toLocaleString('fr-FR') : '?';
+        const articles = v.items?.map(i => `${i.nom} ×${i.qty}`).join(', ') || '—';
+        const annulee = v.annulee;
+        html += `<tr style="${annulee ? 'opacity:0.55;' : ''}">
+            <td style="white-space:nowrap; font-size:12px;">${date}</td>
+            <td style="font-size:12px; max-width:200px; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(articles)}</td>
+            <td><strong style="color:${annulee ? 'var(--danger)' : 'var(--primary)'};">${(v.total||0).toLocaleString('fr-FR')} CFA</strong></td>
+            <td>${annulee
+                ? '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;">ANNULÉE</span>'
+                : '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;">VALIDE</span>'
+            }</td>
+            <td style="white-space:nowrap;">
+                ${!annulee ? `<button class="danger sm" onclick="annulerVente('${v.id}')">❌ Annuler</button>` : '<span style="font-size:11px;color:var(--text-light);">—</span>'}
+                <button class="bluetooth sm" onclick="bluetoothVente('${v.id}')" style="margin-left:4px;">🔵</button>
+            </td>
+        </tr>`;
+    });
+    container.innerHTML = html + '</table>';
+}
+
+function annulerVente(id) {
+    const vente = store.ventes.find(v => v.id === id);
+    if (!vente || vente.annulee) return;
+    if (!confirm(`Annuler cette vente de ${(vente.total||0).toLocaleString('fr-FR')} CFA ?\nLe stock sera restauré.`)) return;
+
+    // Restaurer le stock
+    vente.items?.forEach(item => {
+        const prod = store.produits.find(p => p.id === item.id);
+        if (prod) prod.stock += item.qty;
+    });
+    vente.annulee = true;
+    vente.dateAnnulation = new Date().toISOString();
+
+    updateStore({ ventes: store.ventes, produits: store.produits });
+    filtrerHistorique(document.getElementById("searchVente")?.value || "");
+    toast("✅ Vente annulée — stock restauré", "success");
+}
+
+async function bluetoothVente(id) {
+    const vente = store.ventes.find(v => v.id === id);
+    if (!vente) return;
+    const date = new Date(vente.date).toLocaleString('fr-FR');
+    let texte = `${store.config.shopName}\n`;
+    if (vente.annulee) texte += `*** VENTE ANNULEE ***\n`;
+    texte += `${date}\n------------------------\n`;
+    vente.items?.forEach(i => { texte += `${i.nom} x${i.qty} : ${((i.prix||0)*i.qty).toLocaleString('fr-FR')} CFA\n`; });
+    texte += `------------------------\nTOTAL: ${(vente.total||0).toLocaleString('fr-FR')} CFA\n`;
+    if (vente.annulee) texte += `ANNULEE LE: ${new Date(vente.dateAnnulation).toLocaleString('fr-FR')}\n`;
+    texte += store.config.footerMsg;
+    await envoyerBluetooth(texte);
+}
+
 // ==================== UTILITAIRES ====================
 function escapeHtml(str) {
     if (typeof str !== 'string') return str ?? '';
@@ -1253,7 +1486,8 @@ Object.assign(window, {
     imprimerTicketPerso, bluetoothPerso, whatsappPerso,
     rechercherProd, ajouterPOS, retirerPOS, viderPanierPOS, validerPOS, bluetoothPOS,
     ajouterCatalogue, modifStockCatalogue, supprCatalogue,
-    rechPro, ajouterPro, retirerPro, viderPanierPro, genererPro, imprimerPro, whatsappPro
+    rechPro, ajouterPro, retirerPro, viderPanierPro, genererPro, imprimerPro, whatsappPro,
+    renderHistorique, filtrerHistorique, annulerVente, bluetoothVente
 });
 
 // Navigation par délégation (plus propre)
