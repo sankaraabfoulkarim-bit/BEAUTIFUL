@@ -603,7 +603,9 @@ function loadModule(module) {
 // ==================== MODULE ADMIN ====================
 function calcCAJour() {
     const today = new Date().toISOString().split('T')[0];
-    return store.ventes.filter(v => v.date && v.date.split('T')[0] === today).reduce((s,v) => s + (v.total||0), 0);
+    const caVentes      = store.ventes.filter(v => !v.annulee && v.date && v.date.split('T')[0] === today).reduce((s,v) => s + (v.total||0), 0);
+    const caPrestations = store.prestations.filter(p => p.date === today).reduce((s,p) => s + (p.montant||0), 0);
+    return caVentes + caPrestations;
 }
 
 function renderAdmin() {
@@ -771,17 +773,44 @@ function renderPersonnel() {
             ${store.employes.map(e => `<option value="${e.id}">${escapeHtml(e.prenom)} ${escapeHtml(e.nom)}</option>`).join('')}
         </select>
         <div id="zoneEmploye" style="display:none; margin-top:14px;">
-            <div class="flex-row" style="margin-bottom:10px;">
-                <input type="text" id="prestaNom" placeholder="Prestation" style="flex:2">
-                <input type="number" id="prestaMontant" placeholder="Montant (CFA)" style="flex:1">
-                <button onclick="ajouterPrestation()">Ajouter</button>
+
+            <!-- TABS -->
+            <div style="display:flex; gap:6px; margin-bottom:14px; border-bottom:2px solid var(--bg); padding-bottom:8px;">
+                <button onclick="switchPrestTab('aujourd_hui')" id="tab_aujourd_hui" class="sm" style="background:var(--primary); color:white;">📅 Aujourd'hui</button>
+                <button onclick="switchPrestTab('historique')" id="tab_historique" class="sm secondary">🗂️ Historique</button>
+                <button onclick="switchPrestTab('ca')" id="tab_ca" class="sm secondary">📈 CA Prestations</button>
             </div>
-            <div id="prestationsList"></div>
-            <div id="totalJour" class="total" style="display:none;"></div>
-            <div class="flex-row" style="margin-top:12px;">
-                <button onclick="imprimerTicketPerso()" class="success">🖨️ Imprimer</button>
-                <button onclick="bluetoothPerso()" class="bluetooth">🔵 Bluetooth</button>
-                <button onclick="whatsappPerso()" class="whatsapp">📱 WhatsApp</button>
+
+            <!-- TAB: AUJOURD'HUI -->
+            <div id="panel_aujourd_hui">
+                <div class="flex-row" style="margin-bottom:10px;">
+                    <input type="text" id="prestaNom" placeholder="Prestation" style="flex:2">
+                    <input type="number" id="prestaMontant" placeholder="Montant (CFA)" style="flex:1">
+                    <button onclick="ajouterPrestation()">Ajouter</button>
+                </div>
+                <div id="prestationsList"></div>
+                <div id="totalJour" class="total" style="display:none;"></div>
+                <div class="flex-row" style="margin-top:12px;">
+                    <button onclick="imprimerTicketPerso()" class="success">🖨️ Imprimer</button>
+                    <button onclick="bluetoothPerso()" class="bluetooth">🔵 Bluetooth</button>
+                    <button onclick="whatsappPerso()" class="whatsapp">📱 WhatsApp</button>
+                </div>
+            </div>
+
+            <!-- TAB: HISTORIQUE PRESTATIONS -->
+            <div id="panel_historique" style="display:none;">
+                <div class="flex-row" style="margin-bottom:10px;">
+                    <input type="date" id="filtreHistoDateDeb" style="flex:1">
+                    <input type="date" id="filtreHistoDateFin" style="flex:1">
+                    <input type="text" id="filtreHistoNom" placeholder="Rechercher prestation..." style="flex:2">
+                    <button onclick="filtrerHistoPrest()" class="sm">🔍 Filtrer</button>
+                </div>
+                <div id="historiqueList"></div>
+            </div>
+
+            <!-- TAB: CA PRESTATIONS -->
+            <div id="panel_ca" style="display:none;">
+                <div id="caPrestStats"></div>
             </div>
         </div>
     </div>`;
@@ -859,6 +888,186 @@ function chargerPrestations() {
     const totalEl = document.getElementById("totalJour");
     totalEl.style.display = total > 0 ? "block" : "none";
     totalEl.innerHTML = `💰 Total journée : ${total.toLocaleString('fr-FR')} F CFA`;
+}
+
+// ===== TABS PRESTATIONS =====
+function switchPrestTab(tab) {
+    ['aujourd_hui','historique','ca'].forEach(t => {
+        const panel = document.getElementById('panel_' + t);
+        const btn   = document.getElementById('tab_' + t);
+        if (panel) panel.style.display = t === tab ? 'block' : 'none';
+        if (btn) {
+            btn.className = 'sm' + (t === tab ? '' : ' secondary');
+            btn.style.background = t === tab ? 'var(--primary)' : '';
+            btn.style.color      = t === tab ? 'white' : '';
+        }
+    });
+    if (tab === 'historique') afficherHistoPrest();
+    if (tab === 'ca')         afficherCAPrest();
+}
+
+function filtrerHistoPrest() {
+    afficherHistoPrest();
+}
+
+function afficherHistoPrest() {
+    const container = document.getElementById('historiqueList');
+    if (!container || !currentEmployeId) return;
+
+    let liste = store.prestations.filter(p => p.employe_id === currentEmployeId);
+
+    const dateDeb = document.getElementById('filtreHistoDateDeb')?.value;
+    const dateFin = document.getElementById('filtreHistoDateFin')?.value;
+    const nomFil  = (document.getElementById('filtreHistoNom')?.value || '').toLowerCase();
+
+    if (dateDeb) liste = liste.filter(p => (p.date || '') >= dateDeb);
+    if (dateFin) liste = liste.filter(p => (p.date || '') <= dateFin);
+    if (nomFil)  liste = liste.filter(p => (p.prestation_nom || '').toLowerCase().includes(nomFil));
+
+    // Tri du plus récent au plus ancien
+    liste = liste.sort((a,b) => {
+        const da = (a.date||'') + 'T' + (a.heure||'');
+        const db = (b.date||'') + 'T' + (b.heure||'');
+        return db.localeCompare(da);
+    });
+
+    if (!liste.length) {
+        container.innerHTML = '<p style="color:var(--text-light); font-size:13px; padding:10px 0;">Aucune prestation trouvée</p>';
+        return;
+    }
+
+    const totalFiltré = liste.reduce((s,p) => s + (p.montant||0), 0);
+
+    let html = `<div style="margin-bottom:10px; padding:10px 14px; background:var(--bg); border-radius:var(--radius-sm); display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:13px; color:var(--text-light);">${liste.length} prestation(s) affichée(s)</span>
+        <strong style="color:var(--primary);">${totalFiltré.toLocaleString('fr-FR')} CFA</strong>
+    </div>`;
+    html += '<table><tr><th>Date</th><th>Heure</th><th>Prestation</th><th>Montant</th></tr>';
+    liste.forEach(p => {
+        html += `<tr>
+            <td style="white-space:nowrap; font-size:12px;">${p.date || '—'}</td>
+            <td style="white-space:nowrap; font-size:12px;">${p.heure || '—'}</td>
+            <td>${escapeHtml(p.prestation_nom)}</td>
+            <td><strong style="color:var(--primary);">${(p.montant||0).toLocaleString('fr-FR')} CFA</strong></td>
+        </tr>`;
+    });
+    container.innerHTML = html + '</table>';
+}
+
+function afficherCAPrest() {
+    const container = document.getElementById('caPrestStats');
+    if (!container || !currentEmployeId) return;
+
+    const empList = store.prestations.filter(p => p.employe_id === currentEmployeId);
+    const emp     = store.employes.find(e => e.id === currentEmployeId);
+
+    if (!empList.length) {
+        container.innerHTML = '<p style="color:var(--text-light); font-size:13px; padding:10px 0;">Aucune prestation enregistrée</p>';
+        return;
+    }
+
+    const caTotal = empList.reduce((s,p) => s + (p.montant||0), 0);
+    const today   = new Date().toISOString().split('T')[0];
+    const caJour  = empList.filter(p => p.date === today).reduce((s,p) => s + (p.montant||0), 0);
+
+    // CA par prestation type
+    const parType = {};
+    empList.forEach(p => {
+        const nom = p.prestation_nom || 'Inconnu';
+        if (!parType[nom]) parType[nom] = { total: 0, nb: 0 };
+        parType[nom].total += p.montant || 0;
+        parType[nom].nb++;
+    });
+    const topTypes = Object.entries(parType).sort((a,b) => b[1].total - a[1].total);
+
+    // CA par jour (7 derniers)
+    const parJour = {};
+    empList.forEach(p => {
+        const j = p.date || '?';
+        if (!parJour[j]) parJour[j] = { total: 0, nb: 0 };
+        parJour[j].total += p.montant || 0;
+        parJour[j].nb++;
+    });
+    const jours = Object.keys(parJour).sort((a,b) => b.localeCompare(a)).slice(0, 7);
+
+    // CA par mois
+    const parMois = {};
+    empList.forEach(p => {
+        if (!p.date) return;
+        const mois = p.date.slice(0, 7); // YYYY-MM
+        if (!parMois[mois]) parMois[mois] = { total: 0, nb: 0 };
+        parMois[mois].total += p.montant || 0;
+        parMois[mois].nb++;
+    });
+    const moisList = Object.keys(parMois).sort((a,b) => b.localeCompare(a)).slice(0, 6);
+
+    const moisLabel = m => {
+        const [y,mo] = m.split('-');
+        const noms = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+        return noms[parseInt(mo)-1] + ' ' + y;
+    };
+
+    container.innerHTML = `
+    <div class="kpi-grid" style="margin-bottom:14px;">
+        <div class="kpi-card">
+            <div class="kpi-val">${caTotal.toLocaleString('fr-FR')}</div>
+            <div class="kpi-label">💰 CA Total (CFA)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-val">${empList.length}</div>
+            <div class="kpi-label">🔢 Nb prestations</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-val">${caJour.toLocaleString('fr-FR')}</div>
+            <div class="kpi-label">📅 CA aujourd'hui (CFA)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-val">${Math.round(caTotal / Math.max(empList.length, 1)).toLocaleString('fr-FR')}</div>
+            <div class="kpi-label">⚡ Moy. / prestation (CFA)</div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div>
+            <div class="card" style="margin-bottom:0;">
+                <h3>📅 CA par jour (7 derniers)</h3>
+                <table>
+                    <tr><th>Date</th><th>Prestations</th><th>CA</th></tr>
+                    ${jours.map(j => `<tr>
+                        <td style="font-size:12px;">${new Date(j).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})}</td>
+                        <td style="text-align:center;">${parJour[j].nb}</td>
+                        <td><strong>${parJour[j].total.toLocaleString('fr-FR')} CFA</strong></td>
+                    </tr>`).join('') || '<tr><td colspan="3" style="color:var(--text-light)">Aucune donnée</td></tr>'}
+                </table>
+            </div>
+        </div>
+        <div>
+            <div class="card" style="margin-bottom:0;">
+                <h3>📆 CA par mois</h3>
+                <table>
+                    <tr><th>Mois</th><th>Prestations</th><th>CA</th></tr>
+                    ${moisList.map(m => `<tr>
+                        <td style="font-size:12px;">${moisLabel(m)}</td>
+                        <td style="text-align:center;">${parMois[m].nb}</td>
+                        <td><strong>${parMois[m].total.toLocaleString('fr-FR')} CFA</strong></td>
+                    </tr>`).join('') || '<tr><td colspan="3" style="color:var(--text-light)">Aucune donnée</td></tr>'}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:14px; margin-bottom:0;">
+        <h3>🏆 CA par type de prestation</h3>
+        <table>
+            <tr><th>Prestation</th><th>Nb</th><th>CA total</th><th>% du CA</th></tr>
+            ${topTypes.map(([nom, data]) => `<tr>
+                <td>${escapeHtml(nom)}</td>
+                <td style="text-align:center;">${data.nb}</td>
+                <td><strong>${data.total.toLocaleString('fr-FR')} CFA</strong></td>
+                <td style="color:var(--text-light); font-size:12px;">${Math.round(data.total * 100 / caTotal)}%</td>
+            </tr>`).join('')}
+        </table>
+    </div>`;
 }
 
 function ajouterPrestation() {
@@ -1339,17 +1548,24 @@ function whatsappPro(id) {
 
 // ==================== MODULE HISTORIQUE & ANNULATIONS ====================
 function renderHistorique() {
-    const totalCA = store.ventes.reduce((s, v) => s + (v.annulee ? 0 : v.total || 0), 0);
+    const caVentes      = store.ventes.reduce((s, v) => s + (v.annulee ? 0 : v.total || 0), 0);
+    const caPrestations = store.prestations.reduce((s, p) => s + (p.montant || 0), 0);
+    const totalCA = caVentes + caPrestations;
     const ventesActives = store.ventes.filter(v => !v.annulee);
     const ventesAnnulees = store.ventes.filter(v => v.annulee);
 
-    // Regrouper par jour
+    // Regrouper par jour (ventes + prestations)
     const parJour = {};
     ventesActives.forEach(v => {
         const jour = v.date ? v.date.split('T')[0] : '?';
         if (!parJour[jour]) parJour[jour] = { total: 0, nb: 0 };
         parJour[jour].total += v.total || 0;
         parJour[jour].nb++;
+    });
+    store.prestations.forEach(p => {
+        const jour = p.date || '?';
+        if (!parJour[jour]) parJour[jour] = { total: 0, nb: 0 };
+        parJour[jour].total += p.montant || 0;
     });
     const jours = Object.keys(parJour).sort((a,b) => b.localeCompare(a)).slice(0, 7);
 
@@ -1483,6 +1699,7 @@ Object.assign(window, {
     login, logout, loadModule, saveConfig,
     ajouterDepense, supprimerDepense,
     ajouterEmploye, supprimerEmploye, chargerPrestations, ajouterPrestation,
+    switchPrestTab, filtrerHistoPrest, afficherHistoPrest, afficherCAPrest,
     imprimerTicketPerso, bluetoothPerso, whatsappPerso,
     rechercherProd, ajouterPOS, retirerPOS, viderPanierPOS, validerPOS, bluetoothPOS,
     ajouterCatalogue, modifStockCatalogue, supprCatalogue,
