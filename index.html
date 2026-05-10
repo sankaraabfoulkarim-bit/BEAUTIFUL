@@ -1090,8 +1090,9 @@ function getTicketPerso() {
     const today = new Date().toISOString().split('T')[0];
     const list  = store.prestations.filter(p => p.employe_id === currentEmployeId && p.date === today);
     let total = 0, lignes = "";
-    list.forEach(p => { total += p.montant||0; lignes += `${p.heure} - ${p.prestation_nom} : ${(p.montant||0).toLocaleString('fr-FR')} F CFA\n`; });
-    return `${store.config.shopName}\nSUIVI PRESTATIONS\n📅 ${new Date().toLocaleDateString('fr-FR')}\n👤 ${emp ? emp.prenom+' '+emp.nom : '?'}\n----------------------------------------\n${lignes}\n----------------------------------------\n💰 TOTAL : ${total.toLocaleString('fr-FR')} F CFA\n${store.config.footerMsg}`;
+    list.forEach(p => { total += p.montant||0; lignes += `${p.heure} - ${p.prestation_nom} : ${(p.montant||0).toLocaleString('fr-FR').replace(/[\u00A0\u202F]/g, ' ')} F CFA\n`; });
+    const totalFormate = total.toLocaleString('fr-FR').replace(/[\u00A0\u202F]/g, ' ');
+    return `${store.config.shopName}\nSUIVI PRESTATIONS\nDate: ${new Date().toLocaleDateString('fr-FR')}\nEmploye: ${emp ? emp.prenom+' '+emp.nom : '?'}\n----------------------------------------\n${lignes}\n----------------------------------------\nTOTAL : ${totalFormate} F CFA\n${store.config.footerMsg}`;
 }
 
 function imprimerTicketPerso() {
@@ -1252,14 +1253,38 @@ const BLE_PRINTER = {
     CHUNK:    180  // MTU BLE sécurisé (évite les coupures)
 };
 
+// Nettoie le texte pour compatibilité imprimante thermique (CP437/ASCII)
+// Remplace emojis par texte ASCII et corrige les espaces insécables des prix
+function nettoyerPourImprimante(texte) {
+    return texte
+        // Espaces insécables (U+00A0, U+202F) → espace normal (problème toLocaleString)
+        .replace(/[\u00A0\u202F]/g, ' ')
+        // Emojis fréquents → équivalents texte lisibles sur imprimante
+        .replace(/📅/g, 'Date')
+        .replace(/👤/g, 'Employe')
+        .replace(/💰/g, '$')
+        .replace(/🔵/g, '')
+        .replace(/✅/g, '')
+        .replace(/⚠️/g, '!')
+        .replace(/🛒/g, '')
+        .replace(/🗑️/g, '')
+        .replace(/🔎/g, '')
+        // Supprimer tous les emojis restants (plage Unicode standard)
+        .replace(/[\u{1F300}-\u{1FFFF}]/gu, '')
+        .replace(/[\u{2600}-\u{27BF}]/gu, '')
+        // Garder uniquement les caractères ASCII imprimables + retours à la ligne
+        .replace(/[^\x00-\x7E\n\r]/g, '?');
+}
+
 // Commandes ESC/POS
 function escPos(texte) {
     const enc = new TextEncoder();
+    const texteNettoye = nettoyerPourImprimante(texte);
     // ESC @ = init | texte | couper papier
     return new Uint8Array([
         0x1B, 0x40,           // Init imprimante
         0x1B, 0x61, 0x01,     // Centrer
-        ...enc.encode(texte),
+        ...enc.encode(texteNettoye),
         0x0A, 0x0A, 0x0A,     // 3 sauts de ligne
         0x1D, 0x56, 0x41, 0x00 // Couper papier
     ]);
